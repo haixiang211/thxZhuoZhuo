@@ -19,7 +19,7 @@ public class MainActivity extends AppCompatActivity {
     private MessageAdapter adapter;
     private final List<Message> messageList = new ArrayList<>();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
-    private int expectedMsgId = 1;
+    private int expectedMsgId = 0; // 消息ID通常从0开始
     private final PriorityQueue<Message> messageBuffer = new PriorityQueue<>(22, (m1, m2) -> Integer.compare(m1.getMsgId(), m2.getMsgId()));
 
     @Override
@@ -58,16 +58,24 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void handleNewMessage(Message message) {
+        android.util.Log.d("ChatApp", "Received msgId: " + message.getMsgId() + " type: " + message.getMsgType());
         messageBuffer.offer(message);
-        boolean added = false;
+        
+        // 容错：如果收到的消息缓冲最小ID是1，且一直在等待0，我们修正 expectedMsgId 为 1
+        if (expectedMsgId == 0 && messageList.isEmpty() && !messageBuffer.isEmpty() && messageBuffer.peek().getMsgId() == 1 && messageBuffer.size() >= 3) {
+            expectedMsgId = 1;
+        }
+
+        int initialSize = messageList.size();
         while (!messageBuffer.isEmpty() && messageBuffer.peek().getMsgId() == expectedMsgId) {
             Message msg = messageBuffer.poll();
             messageList.add(msg);
             expectedMsgId++;
-            added = true;
         }
-        if (added) {
-            adapter.notifyItemRangeInserted(messageList.size() - 1, 1);
+        
+        int insertCount = messageList.size() - initialSize;
+        if (insertCount > 0) {
+            adapter.notifyItemRangeInserted(initialSize, insertCount);
             recyclerView.scrollToPosition(messageList.size() - 1);
         }
     }

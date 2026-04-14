@@ -38,9 +38,12 @@ public class MessageItemView extends View {
     }
 
     public void setMessage(Message message, boolean isScrolling) {
+        boolean isSameMessage = (this.message != null && this.message.getMsgId() == message.getMsgId());
+        if (!isSameMessage) {
+            this.currentBitmap = null;
+        }
         this.message = message;
         this.isScrolling = isScrolling;
-        this.currentBitmap = null;
         this.staticLayout = null;
         this.textWidth = 0;
 
@@ -79,7 +82,10 @@ public class MessageItemView extends View {
                 displayH = Math.max(1, (int) (origH * ratio));
             }
 
-            if (!isScrolling) {
+            Bitmap memBitmap = ImageCache.getInstance().getBitmapFromMemCache(message.getContent());
+            if (memBitmap != null) {
+                this.currentBitmap = memBitmap;
+            } else if (!isScrolling) {
                 loadImage();
             }
         }
